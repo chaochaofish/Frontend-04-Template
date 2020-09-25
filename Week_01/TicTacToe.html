@@ -1,0 +1,120 @@
+<style>
+    .cell{
+        width: 100px;
+        height: 100px;
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 50px;
+        line-height: 100px;
+        background: green;
+        border: 1px solid #fff;
+    }
+</style>
+<div id="board"></div>
+<script>
+    let pattern = [
+        [2, 0, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ];
+    let color = 1;
+    let board = document.getElementById('board');
+    function show(){
+        for(let i = 0; i < 3; i++){
+            for(let j = 0; j < 3; j++){
+                let cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.innerText = pattern[i][j] == 2 ? '❌' :
+                                 pattern[i][j] == 1 ? '⭕️' :
+                                 '';
+                // if(pattern[i][j] == 2){
+                //     cell.innerText = '⭕️';
+                // } else if(pattern[i][j] == 1) {
+                //     cell.innerText = '❌';
+                // }
+                board.appendChild(cell);
+                cell.addEventListener('click',function(){
+                    if(pattern[i][j] != 0) return;
+                    pattern[i][j] = color;
+                    cell.innerText = pattern[i][j] == 2 ? '❌' :
+                                     pattern[i][j] == 1 ? '⭕️' :
+                                     '';
+                    if(check(pattern,color,i,j)){
+                        alert(color === 2 ? '❌ is winner!' : '⭕️ is winner!');
+                    }
+                    color = 3 - color;
+                    // console.time()
+                    willwin(pattern,color);
+                    // console.timeEnd()
+                });
+            }
+            board.appendChild(document.createElement('br'));
+        }
+    }
+    function check(pattern,color,i,j){
+        let win = true;
+        // i,j所在的i行
+        for(let column = 0; column < 3; column++){
+            win = true;
+            if(pattern[i][column] !== color) {
+                win = false;
+                break;
+            }
+        }
+        if(win) return true;
+        // i,j所在的j列
+        for(let row = 0; row < 3; row++){
+            win = true;
+            if(pattern[row][j] !== color) {
+                win = false;
+                break;
+            }
+        }
+        if(win) return true;
+        // i,j所在的斜向
+        if(i === j || i + j === 2){
+            for(let cr = 0; cr < 3; cr++){
+                win = true;
+                if(pattern[cr][cr] !== color){
+                    win = false;
+                    break;
+                }
+            }
+            if(win) return true;
+            for(let cr = 0; cr < 3; cr++){
+                win = true;
+                if(pattern[cr][2-cr] !== color){
+                    win = false;
+                    break;
+                }
+            }
+            if(win) return true;
+        }
+        return false;
+    }
+    function clone(pattern){
+        return JSON.parse(JSON.stringify(pattern));
+    }
+    function willwin(pattern,color){
+        for(let i = 0; i < 3; i++){
+            for(let j = 0; j < 3; j++){
+                // 把另一人的棋子放到棋局中的任一留空位置检查是否变成赢局
+                if(pattern[i][j] !== 0) continue;
+                // 因是假设落子所以落子便于判断之后要立即清除此假设落子
+                pattern[i][j] = color;
+                if(check(pattern,color,i,j)){
+                    console.log(color === 2 ? '❌ will win!' : '⭕️ will win!');
+                }
+                pattern[i][j] = 0;
+                // 也可以通过克隆目前棋局来模拟，避免了修改实际pattern
+                // let temp = clone(pattern);
+                // temp[i][j] = color;
+                // if(check(temp,color,i,j)){
+                //     console.log(color === 2 ? '❌ will win!' : '⭕️ will win!');
+                // }
+            }
+        }
+    }
+    show();
+</script>

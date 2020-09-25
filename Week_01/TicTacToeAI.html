@@ -1,0 +1,171 @@
+<style>
+    .cell{
+        width: 100px;
+        height: 100px;
+        display: inline-block;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 50px;
+        line-height: 100px;
+        background: green;
+        border: 1px solid #fff;
+    }
+</style>
+<div id="board"></div>
+<script>
+    let pattern = [
+        [0, 2, 0],
+        [0, 1, 0],
+        [0, 0, 0]
+    ];
+    let color = 1;
+    let board = document.getElementById('board');
+    function show(){
+        for(let i = 0; i < 3; i++){
+            for(let j = 0; j < 3; j++){
+                let cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.innerText = pattern[i][j] == 2 ? '❌' :
+                                 pattern[i][j] == 1 ? '⭕️' :
+                                 '';
+                // if(pattern[i][j] == 2){
+                //     cell.innerText = '⭕️';
+                // } else if(pattern[i][j] == 1) {
+                //     cell.innerText = '❌';
+                // }
+                board.appendChild(cell);
+                cell.addEventListener('click',function(){
+                    if(pattern[i][j] != 0) return;
+                    pattern[i][j] = color;
+                    cell.innerText = pattern[i][j] == 2 ? '❌' :
+                                     pattern[i][j] == 1 ? '⭕️' :
+                                     '';
+                    if(check(pattern,color,i,j)){
+                        alert(color === 2 ? '❌ is winner!' : '⭕️ is winner!');
+                    }
+                    color = 3 - color;
+                    // console.time()
+                    if(willwin(pattern,color)){
+                        // 判断下一个人即对方是否将赢，所以whichwin跟color是对立反置的
+                        console.log(color === 2 ? '❌ will win!' : '⭕️ will win!');
+                    }
+                    // console.timeEnd()
+                    // 升级成步步提示
+                    // 每走一步棋之后，都要判断新棋局对即将走棋者是否还有可赢/最好选择 给出提示
+                    console.log(bestChoice(pattern,color));
+                });
+            }
+            board.appendChild(document.createElement('br'));
+        }
+    }
+    function check(pattern,color,i,j){
+        let win = true;
+        // i,j所在的i行
+        for(let column = 0; column < 3; column++){
+            win = true;
+            if(pattern[i][column] !== color) {
+                win = false;
+                break;
+            }
+        }
+        if(win) return true;
+        // i,j所在的j列
+        for(let row = 0; row < 3; row++){
+            win = true;
+            if(pattern[row][j] !== color) {
+                win = false;
+                break;
+            }
+        }
+        if(win) return true;
+        // i,j所在的斜向
+        if(i === j || i + j === 2){
+            for(let cr = 0; cr < 3; cr++){
+                win = true;
+                if(pattern[cr][cr] !== color){
+                    win = false;
+                    break;
+                }
+            }
+            if(win) return true;
+            for(let cr = 0; cr < 3; cr++){
+                win = true;
+                if(pattern[cr][2-cr] !== color){
+                    win = false;
+                    break;
+                }
+            }
+            if(win) return true;
+        }
+        return false;
+    }
+    function clone(pattern){
+        return JSON.parse(JSON.stringify(pattern));
+    }
+    function willwin(pattern,color){
+        for(let i = 0; i < 3; i++){
+            for(let j = 0; j < 3; j++){
+                // 把另一人的棋子放到棋局中的任一留空位置检查是否变成赢局
+                if(pattern[i][j] !== 0) continue;
+                // 因是假设落子所以落子便于判断之后要立即清除此假设落子
+                pattern[i][j] = color;
+                if(check(pattern,color,i,j)){
+                    pattern[i][j] = 0;
+                    return [i,j];
+                } else {
+                    pattern[i][j] = 0;
+                }
+                // 也可以通过克隆目前棋局来模拟，避免了修改实际pattern
+                // let temp = clone(pattern);
+                // temp[i][j] = color;
+                // if(check(temp,color,i,j)) return true;
+            }
+        }
+        return null;
+    }
+    // 用来获得如果棋局可以赢，应该落子在哪里保证赢1；如果不可以赢，应该落子在哪里保证和棋0；最后一种就是必输的棋局-1，落子在哪里都无所谓了.
+    function bestChoice(pattern,color){
+        // 对方最好的选择就是我方最差的选择，反之亦然
+        let p;
+        let result = -2;    //记录下-1，0，1比较得来的最大值时使用，小于一切要比较数值的一个初始值
+        let point = null;
+        // 如果下一步将赢，说明将赢的落子位置即保证赢1，即最好的选择。
+        if(p = willwin(pattern,color)){
+            return {
+                result: 1,
+                point: p
+            }
+        }
+        // 其他时候就尝试在各个空白处落子后再判断可否willwin
+        outer:for(let i = 0; i < 3; i++){
+            for(let j = 0; j < 3; j++){
+                if(pattern[i][j] !== 0) continue;
+                let temp = null;
+                temp = clone(pattern);
+                temp[i][j] = color;
+                // 获得对方将面对的最优选择r，根据对方最优实为我方最差的策略，我方选择即为-r
+                //（如果r是1实际最优，即我方r会是-1实际最差；如果r是-1实际最差，即我方r会是1实际最优）
+                let r = bestChoice(temp,3 - color).result;  //落子之后求得对方的最优选择
+                // r也可能为初始值-2，
+                // 当此落子位置是对方的越不理想最优选择时（为-1或0），此落子位置即为我方越理想的最优结果（即1或0）
+                // 在对方的所有结果中给对方找最差的-会成为最有利于我方的
+                if(-r > result){    //通过if比较代码 持续用小数替换大数来记录下对我方最好的（显然，r是对方的bestChoice，-r就是我方的bestChoice）
+                    result = -r;    //此后result不可能再为-2，不断被大值替换掉了
+                    point = [i,j];
+                }
+                // 胜负剪枝：一旦获得实际最优选择1就可以直接跳出循环展示结果（1是已知的最大数了）
+                if(result === 1) break outer;
+                // 若r为1，则不会有对我方最好的结果即-r > result不成立，result仍是初始值-2、point为null即不存在
+            }
+        }
+        return {
+            result: point ? result : 0, //point不存在时result为0和局，否则result就是if中替换记录下的可能局面
+            point: point
+        }
+    }
+
+    show();
+    // 仅初始提示
+    // 在第二个人走了第一步棋之后，判断棋局对第一个人是否还有可赢/最好选择
+    // console.log(bestChoice(pattern,color));
+</script>
