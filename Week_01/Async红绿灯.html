@@ -1,0 +1,48 @@
+<style>
+    #light span{ width: 50px; height: 50px; display: inline-block; margin-right: 20px; border-radius: 50%; border: 1px solid #000000;}
+    /* .red{background: red;}
+    .yellow{background: yellow;}
+    .green{background: green;} */
+    #next{ width: 100px; height: 20px; display: block; text-align: center; cursor: pointer; border: 1px solid #000000; margin-top: 20px;}
+</style>
+<div>
+    <h1>要求：路口一红绿灯，绿灯10秒，黄灯2秒，红灯5秒；无限循环。</h1>
+    <h2>拆解题目：</h2>
+    <ul>
+        <li>
+            1.sleep函数处理延时：<br>
+            <span>方案一：绿灯亮起持续10秒，黄灯亮起持续2秒，红灯亮起持续5秒，重复sleep1</span><br>
+            <span>方案二：初始绿灯，10秒后黄灯，2秒后红灯，5秒后重复sleep2</span>
+        </li>
+        <li>2.异步函数保证不同颜色灯的准时完成后切换</li>
+        <li>3.while(true){}进行无限循环</li>
+    </ul>
+    <div id="light">
+        <span class="red"></span>
+        <span class="yellow"></span>
+        <span class="green"></span>
+    </div>
+    <div id="next">next</div>
+</div>
+<script>
+    let lightList = document.getElementById('light');
+    let lights = lightList.getElementsByTagName('span');
+    function sleep(delay,color) {
+        return new Promise((resolve,reject) => {
+            for(let item of lights) {
+                item.style.backgroundColor = '';
+            }
+            // console.log(lightList.getElementsByClassName(color)[0].classList)
+            lightList.getElementsByClassName(color)[0].style.backgroundColor = color;
+            setTimeout(resolve,delay);
+        })
+    }
+    async function showLight() {
+        while(true){
+            await sleep(10000,'green');
+            await sleep(2000,'yellow');
+            await sleep(5000,'red');
+        }
+    }
+    showLight();
+</script>
