@@ -64,4 +64,35 @@
     saveButt.addEventListener('click',function(){
         localStorage.setItem('map',JSON.stringify(map));
     });
+
+    function path(start,end) {
+        let queue = [start];
+        // 检查已推入队列集合中的当前起点（中间点）是否等于目标点
+        // 若不等的话继续寻找：往队列集合中insert(push)起点周围的四个环绕点
+        // 继续检查持续被推入的新点是否等于目标点，若不等于持续insert(push)新点周围的环绕点。
+        // 直至找到目标点，所以这里需使用循环-结束条件是寻到目标点-用return终止循环
+        //                                               -若始终未寻到目标点，queue.length已然为0了，循环也终止
+        while(queue.length){
+            let [x,y] = queue.shift();
+            console.log(x,y)
+            // 如果寻到的正是目标点end即 结束寻路-return直接退出循环体while所在的函数path结束执行
+            //                              -break退出循环体while向下执行path函数的剩余代码
+            if(x === end[0] && y === end[1]) return true;
+            insertQueue(x-1,y);
+            insertQueue(x+1,y);
+            insertQueue(x,y-1);
+            insertQueue(x,y+1);
+        }
+        // console.log('ookk')
+        function insertQueue(x,y) {
+            // 寻到的当前点已出地图边界
+            if(x < 0 || x >= 100 || y < 0 || y >= 100) return;
+            // 寻到的当前点是black墙1或者是已经寻过的点2
+            if(map[x * 100 + y]) return;
+            // 一旦寻过的点就标记为2同时推入队列集合
+            map[x * 100 + y] = 2;
+            queue.push([x,y]);
+        }
+    }
+    path([0,0],[5,5]);
 </script>
