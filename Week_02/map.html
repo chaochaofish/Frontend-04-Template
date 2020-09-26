@@ -1,0 +1,67 @@
+<style>
+    .cell{
+        width: 6px;
+        height: 6px;
+        display: inline-block;
+        background: #cccccc;
+        border: 1px solid #ffffff;
+    }
+    #save{
+        width: 80px;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #000000;
+        border-radius: 5px;
+        vertical-align: middle;
+        line-height: 30px;
+        margin: 20px 0;
+        cursor: pointer;
+    }
+</style>
+<div id="container"></div>
+<div id="save">save</div>
+<script>
+    let container = document.getElementById('container');
+    let map = localStorage.getItem('map') ? JSON.parse(localStorage.getItem('map')) : Array(10000).fill(0);
+    function drawMap() {
+        for(let i = 0; i < 100; i++){
+            for(let j = 0; j < 100; j++){
+                let cell = document.createElement('div');
+                cell.classList.add('cell');
+                if(map[i * 100 + j] === 1) cell.style.backgroundColor = '#000000';
+                cell.addEventListener('mousemove',function(){
+                    if(mousedownFlag) {
+                        if(clear){
+                            this.style.backgroundColor = '';
+                            map[i * 100 + j] = 0;
+                        } else {
+                            this.style.backgroundColor = '#000000';
+                            map[i * 100 + j] = 1;
+                        }
+                    }
+                });
+                container.appendChild(cell);
+            }
+            container.appendChild(document.createElement('br'));
+        }
+        
+    }
+    drawMap();
+
+    let mousedownFlag = false;
+    let clear = false;
+    let saveButt = document.getElementById('save');
+    document.addEventListener('mousedown',function(e){
+        mousedownFlag = true;
+        clear = (e.which === 3);
+    });
+    document.addEventListener('mouseup',function(){
+        mousedownFlag = false;
+    });
+    document.addEventListener('contextmenu',function(e){
+        e.preventDefault();
+    });
+    saveButt.addEventListener('click',function(){
+        localStorage.setItem('map',JSON.stringify(map));
+    });
+</script>
