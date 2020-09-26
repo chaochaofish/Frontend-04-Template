@@ -1,10 +1,16 @@
 <style>
+    #container{
+        width: 701px;
+        border-right: 1px solid #ffffff;
+        border-bottom: 1px solid #ffffff;
+    }
     .cell{
         width: 6px;
         height: 6px;
         display: inline-block;
         background: #cccccc;
-        border: 1px solid #ffffff;
+        border-left: 1px solid #ffffff;
+        border-top: 1px solid #ffffff;
     }
     #save{
         width: 80px;
@@ -42,7 +48,9 @@
                 });
                 container.appendChild(cell);
             }
-            container.appendChild(document.createElement('br'));
+            // 插入br会影响寻路可视化中container.children[index]的获取结果错误；改用容器宽度样式控制自动折行了
+            // 或者将container.children[index]换成container.getElementsByTagName('div')[index]即可插入br而不受影响
+            // container.appendChild(document.createElement('br'));
         }
         
     }
@@ -65,7 +73,12 @@
         localStorage.setItem('map',JSON.stringify(map));
     });
 
-    function path(start,end) {
+    function sleep(delay) {
+        return new Promise((resolve,reject) => {
+            setTimeout(resolve,delay);
+        })
+    }
+    async function path(start,end) {
         let queue = [start];
         // 检查已推入队列集合中的当前起点（中间点）是否等于目标点
         // 若不等的话继续寻找：往队列集合中insert(push)起点周围的四个环绕点
@@ -78,21 +91,24 @@
             // 如果寻到的正是目标点end即 结束寻路-return直接退出循环体while所在的函数path结束执行
             //                              -break退出循环体while向下执行path函数的剩余代码
             if(x === end[0] && y === end[1]) return true;
-            insertQueue(x-1,y);
-            insertQueue(x+1,y);
-            insertQueue(x,y-1);
-            insertQueue(x,y+1);
+            await insertQueue(x-1,y);
+            await insertQueue(x+1,y);
+            await insertQueue(x,y-1);
+            await insertQueue(x,y+1);
         }
         // console.log('ookk')
-        function insertQueue(x,y) {
+        async function insertQueue(x,y) {
             // 寻到的当前点已出地图边界
             if(x < 0 || x >= 100 || y < 0 || y >= 100) return;
             // 寻到的当前点是black墙1或者是已经寻过的点2
             if(map[x * 100 + y]) return;
             // 一旦寻过的点就标记为2同时推入队列集合
+            await sleep(10);
+            container.children[x * 100 + y].style.backgroundColor = 'green';
+            // container.getElementsByTagName('div')[x * 100 + y].style.backgroundColor = 'green';
             map[x * 100 + y] = 2;
             queue.push([x,y]);
         }
     }
-    path([0,0],[5,5]);
+    path([0,0],[50,50]);
 </script>
