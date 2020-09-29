@@ -1,0 +1,176 @@
+<style>
+    #container{
+        width: 701px;
+        border-right: 1px solid #ffffff;
+        border-bottom: 1px solid #ffffff;
+    }
+    .cell{
+        width: 6px;
+        height: 6px;
+        display: inline-block;
+        background: #cccccc;
+        border-left: 1px solid #ffffff;
+        border-top: 1px solid #ffffff;
+    }
+    #save{
+        width: 80px;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #000000;
+        border-radius: 5px;
+        vertical-align: middle;
+        line-height: 30px;
+        margin: 20px 0;
+        cursor: pointer;
+    }
+</style>
+<div id="container"></div>
+<div id="save">save</div>
+<script>
+    let container = document.getElementById('container');
+    let map = localStorage.getItem('map') ? JSON.parse(localStorage.getItem('map')) : Array(10000).fill(0);
+    function drawMap() {
+        for(let i = 0; i < 100; i++){
+            for(let j = 0; j < 100; j++){
+                let cell = document.createElement('div');
+                cell.classList.add('cell');
+                if(map[i * 100 + j] === 1) cell.style.backgroundColor = '#000000';
+                cell.addEventListener('mousemove',function(){
+                    if(mousedownFlag) {
+                        if(clear){
+                            this.style.backgroundColor = '';
+                            map[i * 100 + j] = 0;
+                        } else {
+                            this.style.backgroundColor = '#000000';
+                            map[i * 100 + j] = 1;
+                        }
+                    }
+                });
+                container.appendChild(cell);
+            }
+            // 插入br会影响寻路可视化中container.children[index]的获取结果错误；改用容器宽度样式控制自动折行了
+            // 或者将container.children[index]换成container.getElementsByTagName('div')[index]即可插入br而不受影响
+            // container.appendChild(document.createElement('br'));
+        }
+        
+    }
+    drawMap();
+
+    let mousedownFlag = false;
+    let clear = false;
+    let saveButt = document.getElementById('save');
+    document.addEventListener('mousedown',function(e){
+        mousedownFlag = true;
+        clear = (e.which === 3);
+    });
+    document.addEventListener('mouseup',function(){
+        mousedownFlag = false;
+    });
+    document.addEventListener('contextmenu',function(e){
+        e.preventDefault();
+    });
+    saveButt.addEventListener('click',function(){
+        localStorage.setItem('map',JSON.stringify(map));
+    });
+
+    function sleep(delay) {
+        return new Promise((resolve,reject) => {
+            setTimeout(resolve,delay);
+        })
+    }
+    class Sorted {
+        constructor(data, compare) {
+            this.data = data.slice();   //利用slice复制出一份新数组，class中所有操作不影响原数组
+            this.compare = compare || ((a,b) => a-b);
+        }
+        take() {
+            if(!this.data.length) return;
+            let min = this.data[0];
+            let minIndex = 0;
+            // 因为min初始值设定为data中第一个值了，所以循环可以忽略第一个值直接从i=1开始了
+            for(let i = 1; i < this.data.length; i++) {
+                //if(this.data[i] < min) {    //错误，每个值都是个坐标，不能直接比较，而是要经过compare来得到比较后的结果，
+                if(this.compare(this.data[i], min) < 0) {    //因为a和b可能是简单的值也可能是一个计算函数-如当前场景中的distance
+                    min  = this.data[i];
+                    minIndex = i;
+                }
+            }
+            // 直接使用splice删掉data中最小值是O(N)操作（删除最小值后他后面所有值向前发生了移位），以下操作可以实现O(1)操作
+            // ：将data中最后位置的值写到最小值的位置上，再将最后位置pop掉。————实现了删除最小值却无须后面所有数值向前移位。
+            this.data[minIndex] = this.data[this.data.length - 1];
+            this.data.pop();
+
+            return min;
+        }
+        give(v) {
+            this.data.push(v);
+        }
+        get length() {
+            return this.data.length;
+        }
+    }
+    async function findPath(start,end) {
+        //克隆map数组。后面寻路的查找标记过程都在克隆体table上进行，每次刷新页面的初始map永远干净不会出现标记痕迹
+        let table = Object.create(map);
+        let queue = new Sorted([start], (a,b) => distance(a) - distance(b));
+        function distance(point) {
+            return (point[0] - end[0]) ** 2 + (point[1] - end[1]) ** 2;
+        }
+        
+        async function insertQueue(x,y,pre) {
+            // 寻到的当前点已出地图边界，return终止此次insertQueue函数操作。
+            if(x < 0 || x >= 100 || y < 0 || y >= 100) return;
+            // 寻到的当前点是black墙1或者是已经寻过的点pre，return终止此次insertQueue函数操作。
+            if(table[x * 100 + y]) return;
+            // 一旦寻过的点就在视图结构container中标绿、在数据结构table(map)中把它的值标为它的中心点/前驱点坐标；同时将寻过的点的坐标推入队列集合
+            await sleep(1);
+            container.children[x * 100 + y].style.backgroundColor = 'green';
+            // container.getElementsByTagName('div')[x * 100 + y].style.backgroundColor = 'green';
+            table[x * 100 + y] = pre;
+            queue.give([x,y]);
+        }
+        // 检查已推入队列集合中的当前起点（中间点）是否等于目标点
+        // 若不等的话继续寻找：往队列集合中insert(push)起点周围的四个环绕点
+        // 继续检查持续被推入的新点是否等于目标点，若不等于持续insert(push)新点周围的环绕点。
+        // 直至找到目标点，所以这里需使用循环-结束条件是寻到目标点-用return终止循环
+        //                                               -若始终未寻到目标点，queue.length已然为0了，循环也终止
+        
+        while(queue.length){    // 需要在Sorted中定义get length()方法后可用
+            let [x,y] = queue.take();
+            // console.log(x,y)
+            // 如果寻到的正是目标点end即 结束寻路-return直接退出循环体while所在的函数path结束执行
+            //                              -break退出循环体while向下执行path函数的剩余代码
+            // if(x === end[0] && y === end[1]) return true;
+            // 如果寻到了目标点的话，就从终点开始往回遍历出所有途径过的中心点/前驱点per坐标一一写入数据结构path并一一绘制到视图结构container中
+            // 最后返回此路径作为findPath函数结果
+            if(x === end[0] && y === end[1]) {
+                let path = [];
+                //符合 (x === start[0] && y === start[1]) 则不再执行while
+                //反之 !(x === start[0] && y === start[1]) 就是执行while的条件
+                //即 (x !== start[0] || y !== start[1])
+                while(x !== start[0] || y !== start[1]) {   //只要前驱点不是严格start起点就持续循环下去（一旦严格匹配start坐标，才意味着循环结束）
+                    path.push(table[x * 100 + y]);   //写在这里是为了将首个点即目标点也写入
+                    // ******此处修改了判断条件中x和y的值，推进while循环的每层结果变化
+                    [x,y] = table[x * 100 + y]; //获取map中当前寻到的点的值-即它的前驱点坐标，通过结构赋值重新给了x和y
+                    // 此时x和y已经变成了前驱点的坐标值
+                    // path.push([x,y]);   //用path记录下所有的中心点/前驱点
+                    await sleep(10);
+                    container.children[x * 100 + y].style.backgroundColor = 'pink'; // 在视图container中绘制出前驱点组成的路径
+                }
+                return path;
+            }
+            await insertQueue(x-1,y,[x,y]);
+            await insertQueue(x+1,y,[x,y]);
+            await insertQueue(x,y-1,[x,y]);
+            await insertQueue(x,y+1,[x,y]);
+
+            await insertQueue(x-1,y-1,[x,y]);
+            await insertQueue(x-1,y+1,[x,y]);
+            await insertQueue(x+1,y-1,[x,y]);
+            await insertQueue(x+1,y+1,[x,y]);
+        }
+        // console.log('ookk')
+        return null;
+    }
+    console.log(findPath([0,0],[50,50]));
+</script>
